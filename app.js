@@ -23,6 +23,7 @@ app.get("/", function(req, res){
 
 app.get("/campgrounds", function(req, res){
     res.render("campgrounds",{campgrounds:campgrounds});
+    // ^ 2 argumentos: 1 é o nome, pode ser qualquer coisa e o segundo se refere ao arry campgrounds
 });
 
 app.post("/campgrounds", function(req, res){
@@ -36,7 +37,7 @@ app.post("/campgrounds", function(req, res){
 });
 
 app.get("/campgrounds/new", function(req, res){
-   res.render("new.ejs");
+   res.render("new");
 });
 
 app.listen(3000, function(){
