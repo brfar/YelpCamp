@@ -1,44 +1,91 @@
-var express = require("express");
-var app = express();
-var bodyParser = require("body-parser");
+var express     = require("express"),
+    app         = express(),
+    bodyParser  = require("body-parser"),
+    mongoose    = require("mongoose")
 
+mongoose.connect("mongodb://localhost/yelp_camp");
 app.use(bodyParser.urlencoded({extended: true}));
+// body-parser extract the entire body portion of an incoming request stream and exposes it on req.body
 app.set("view engine", "ejs");
 
-var campgrounds = [
-        {name: "Salmon Creek", image: "https://farm9.staticflickr.com/8442/7962474612_bf2baf67c0.jpg"},
-        {name: "Granite Hill", image: "https://farm1.staticflickr.com/60/215827008_6489cd30c3.jpg"},
-        {name: "Mountain Goat's Rest", image: "https://farm7.staticflickr.com/6057/6234565071_4d20668bbd.jpg"},
-        {name: "Salmon Creek", image: "https://farm9.staticflickr.com/8442/7962474612_bf2baf67c0.jpg"},
-        {name: "Granite Hill", image: "https://farm1.staticflickr.com/60/215827008_6489cd30c3.jpg"},
-        {name: "Mountain Goat's Rest", image: "https://farm7.staticflickr.com/6057/6234565071_4d20668bbd.jpg"},
-        {name: "Salmon Creek", image: "https://farm9.staticflickr.com/8442/7962474612_bf2baf67c0.jpg"},
-        {name: "Granite Hill", image: "https://farm1.staticflickr.com/60/215827008_6489cd30c3.jpg"},
-        {name: "Mountain Goat's Rest", image: "https://farm7.staticflickr.com/6057/6234565071_4d20668bbd.jpg"}
-];
+// SCHEMA SETUP
+var campgroundSchema = new mongoose.Schema({
+   name: String,
+   image: String,
+   description: String
+});
+
+var Campground = mongoose.model("Campground", campgroundSchema);
+
+// Campground.create(
+//      {
+//          name: "Salmon Creek",
+//          image: "https://farm8.staticflickr.com/7246/7468674992_b8db31480e.jpg",
+//          description: "Ut pulvinar eget eros et ullamcorper. Vestibulum convallis felis eu ligula volutpat, et tempor sem scelerisque. Suspendisse posuere a tellus id tincidunt!"
+//
+//      },
+//      function(err, campground){
+//       if(err){
+//           console.log(err);
+//       } else {
+//           console.log("NEWLY CREATED CAMPGROUND: ");
+//           console.log(campground);
+//       }
+//     });
 
 app.get("/", function(req, res){
     res.render("landing");
 });
 
+//INDEX - show all campgrounds
 app.get("/campgrounds", function(req, res){
-    res.render("campgrounds",{campgrounds:campgrounds});
-    // ^ 2 argumentos: 1 é o nome, pode ser qualquer coisa e o segundo se refere ao arry campgrounds
+    // Get all campgrounds from DB
+    Campground.find({}, function(err, allCampgrounds){
+       if(err){
+           console.log(err);
+       } else {
+          res.render("index",{campgrounds:allCampgrounds});
+       }
+    });
 });
 
+//CREATE - add new campground to DB
 app.post("/campgrounds", function(req, res){
     // get data from form and add to campgrounds array
     var name = req.body.name;
     var image = req.body.image;
-    var newCampground = {name: name, image: image}
-    campgrounds.push(newCampground);
-    //redirect back to campgrounds page
-    res.redirect("/campgrounds");
+    var desc = req.body.description;
+    var newCampground = {name: name, image: image, description: desc}
+    /* cria um objeto para ser "pushado" no db
+    name = var name & image = var image */
+    // Create a new campground and save to DB
+    Campground.create(newCampground, function(err, newlyCreated){
+        if(err){
+            console.log(err);
+        } else {
+            //redirect back to campgrounds page
+            res.redirect("/campgrounds");
+        }
+    });
 });
 
+//NEW - show form to create new campground
 app.get("/campgrounds/new", function(req, res){
    res.render("new");
 });
+ 
+// SHOW - shows more info about one campground
+app.get("/campgrounds/:id", function(req, res){
+    //find the campground with provided ID
+    Campground.findById(req.params.id, function(err, foundCampground){
+        if(err){
+            console.log(err);
+        } else {
+            //render show template with that campground
+            res.render("show", {campground: foundCampground});
+        }
+    });
+})
 
 app.listen(3000, function(){
    console.log("The YelpCamp Server Has Started!");
