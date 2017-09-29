@@ -27,12 +27,12 @@ router.post("/register", function(req, res){
     });
 });
 
-// show login form
+//show login form
 router.get("/login", function(req, res){
    res.render("login");
 });
 
-// handling login logic
+//handling login logic
 router.post("/login", passport.authenticate("local",
     {
         successRedirect: "/campgrounds",
@@ -53,6 +53,5 @@ function isLoggedIn(req, res, next){
     }
     res.redirect("/login");
 }
-
 
 module.exports = router;
