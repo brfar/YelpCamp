@@ -2,16 +2,17 @@ var express = require("express");
 var router  = express.Router();
 var Campground = require("../models/campground");
 var middleware = require("../middleware");
+var geocoder = require('geocoder');
 
 //INDEX - show all campgrounds
 router.get("/", function(req, res){ //no primeiro paramento está implicito que é /campgrounds. foi definido no app.js que todos os paths desse arquivo seriam encurtados
     // Get all campgrounds from DB
     Campground.find({}, function(err, allCampgrounds){
-       if(err){
-           console.log(err);
-       } else {
-          res.render("campgrounds/index",{campgrounds:allCampgrounds});
-       }
+        if(err){
+            console.log(err);
+        } else {
+            res.render("campgrounds/index",{campgrounds:allCampgrounds});
+        }
     });
 });
 
@@ -25,7 +26,12 @@ router.post("/", middleware.isLoggedIn, function(req, res){
         id: req.user._id,
         username: req.user.username
     }
-    var newCampground = {name: name, image: image, description: desc, author:author}
+    var cost = req.body.cost;
+    geocoder.geocode(req.body.location, function (err, data) {
+        var lat = data.results[0].geometry.location.lat;
+        var lng = data.results[0].geometry.location.lng;
+        var location = data.results[0].formatted_address;
+        var newCampground = {name: name, image: image, description: desc, cost: cost, author:author, location: location, lat: lat, lng: lng};
     /* cria um objeto para ser "pushado" no db
     name = var name & image = var image */
     // Create a new campground and save to DB
@@ -34,9 +40,11 @@ router.post("/", middleware.isLoggedIn, function(req, res){
             console.log(err);
         } else {
             //redirect back to campgrounds page
+            console.log(newlyCreated);
             res.redirect("/campgrounds");
         }
     });
+  });
 });
 
 //NEW - show form to create new campground
@@ -59,35 +67,49 @@ router.get("/:id", function(req, res){
 });
 
 // EDIT CAMPGROUND ROUTE
-router.get("/:id/edit", middleware.checkCampgroundOwnership, function(req, res){
+router.get("/:id/edit", middleware.checkUserCampground, function(req, res){
+    console.log("IN EDIT!");
+    //find the campground with provided ID
     Campground.findById(req.params.id, function(err, foundCampground){
-        res.render("campgrounds/edit", {campground: foundCampground});
+        if(err){
+            console.log(err);
+        } else {
+            //render show template with that campground
+            res.render("campgrounds/edit", {campground: foundCampground});
+        }
     });
 });
 
 // UPDATE CAMPGROUND ROUTE
-router.put("/:id",middleware.checkCampgroundOwnership, function(req, res){
-    // find and update the correct campground vvvv param 1: id we wanna edit - param 2: data we wanna update 
-    Campground.findByIdAndUpdate(req.params.id, req.body.campground, function(err, updatedCampground){
-       if(err){
-           res.redirect("/campgrounds");
-       } else {
-           //redirect somewhere(show page)
-           res.redirect("/campgrounds/" + req.params.id);
-       }
+router.put("/:id", function(req, res){
+  geocoder.geocode(req.body.location, function (err, data) {
+    var lat = data.results[0].geometry.location.lat;
+    var lng = data.results[0].geometry.location.lng;
+    var location = data.results[0].formatted_address;
+    var newData = {name: req.body.name, image: req.body.image, description: req.body.description, cost: req.body.cost, location: location, lat: lat, lng: lng};
+    Campground.findByIdAndUpdate(req.params.id, {$set: newData}, function(err, campground){
+        if(err){
+            req.flash("error", err.message);
+            res.redirect("back");
+        } else {
+            req.flash("success","Successfully Updated!");
+            res.redirect("/campgrounds/" + campground._id);
+        }
     });
+  });
 });
 
+//????????????????????????
 // DESTROY CAMPGROUND ROUTE
-router.delete("/:id",middleware.checkCampgroundOwnership, function(req, res){
-   Campground.findByIdAndRemove(req.params.id, function(err){
-      if(err){
-          res.redirect("/campgrounds");
-      } else {
-          res.redirect("/campgrounds");
-      }
-   });
-});
+// router.delete("/:id",middleware.checkCampgroundOwnership, function(req, res){
+//    Campground.findByIdAndRemove(req.params.id, function(err){
+//       if(err){
+//           res.redirect("/campgrounds");
+//       } else {
+//           res.redirect("/campgrounds");
+//       }
+//    });
+// });
 
 
 module.exports = router;
